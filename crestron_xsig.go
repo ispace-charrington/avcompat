@@ -173,6 +173,8 @@ func (d *ISCDecoder) Decode(v interface{}) (err error) {
 	}
 	defer func() { d.err = err }()
 
+	buf := make([]byte, 256)
+
 	if d.err != nil {
 		err = d.err
 		return
@@ -184,60 +186,60 @@ func (d *ISCDecoder) Decode(v interface{}) (err error) {
 	}
 	// Clear Operation
 	if p[0] == byte(0xFC) {
-		res := ISCClearOperation{}
-		buf := make([]byte, 1)
-		_, err = io.ReadFull(d.r, buf)
+		_, err = io.ReadFull(d.r, buf[0:1])
 		if err != nil {
 			return
 		}
-		err = res.UnmarshalBinary(buf)
+
+		var res ISCClearOperation
+		err = res.UnmarshalBinary(buf[0:1])
 		v = res
 		return
 	}
 	// Refresh Operation
 	if p[0] == byte(0xFD) {
-		res := ISCRefreshOperation{}
-		buf := make([]byte, 1)
-		_, err = io.ReadFull(d.r, buf)
+		_, err = io.ReadFull(d.r, buf[0:1])
 		if err != nil {
 			return
 		}
-		err = res.UnmarshalBinary(buf)
+
+		var res ISCRefreshOperation
+		err = res.UnmarshalBinary(buf[0:1])
 		v = res
 		return
 	}
 	// Digital Transition
 	if p[0]&byte(0xC0) == byte(0x80) {
-		res := ISCDigitalTransition{}
-		buf := make([]byte, 2)
-		_, err = io.ReadFull(d.r, buf)
+		_, err = io.ReadFull(d.r, buf[0:2])
 		if err != nil {
 			return
 		}
-		err = res.UnmarshalBinary(buf)
+
+		var res ISCDigitalTransition
+		err = res.UnmarshalBinary(buf[0:2])
 		v = res
 		return
 	}
 	// Analog Transition
 	if p[0]&byte(0xC8) == byte(0xC0) {
-		res := ISCAnalogTransition{}
-		buf := make([]byte, 4)
-		_, err = io.ReadFull(d.r, buf)
+		_, err = io.ReadFull(d.r, buf[0:4])
 		if err != nil {
 			return
 		}
+
+		var res ISCAnalogTransition
 		err = res.UnmarshalBinary(buf)
 		v = res
 		return
 	}
 	// Serial Transition
 	if p[0]&byte(0xF8) == byte(0xC8) {
-		res := ISCSerialTransition{}
-		var buf []byte // to avoid shadowed err on next line
 		buf, err = d.r.ReadBytes(0xFF)
 		if err != nil {
 			return
 		}
+
+		var res ISCSerialTransition
 		err = res.UnmarshalBinary(buf)
 		v = res
 		return
