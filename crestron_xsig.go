@@ -12,18 +12,18 @@ var (
 )
 
 type ISCDigitalTransition struct {
-	index uint
-	value bool
+	Index uint
+	Value bool
 }
 
 type ISCAnalogTransition struct {
-	index uint
-	value uint16
+	Index uint
+	Value uint16
 }
 
 type ISCSerialTransition struct {
-	index uint
-	value []byte
+	Index uint
+	Value []byte
 }
 
 type ISCClearOperation struct{}
@@ -31,14 +31,14 @@ type ISCRefreshOperation struct{}
 
 func (t *ISCDigitalTransition) MarshalBinary() ([]byte, error) {
 	var buf [2]byte
-	if t.index > 4095 {
+	if t.Index > 4095 {
 		return nil, ErrIndexRange
 	}
-	buf[0] = byte(0x80) | byte(0x1f&(t.index>>7))
-	if !t.value {
+	buf[0] = byte(0x80) | byte(0x1f&(t.Index>>7))
+	if !t.Value {
 		buf[0] |= 0x20 // contains the complement of the value
 	}
-	buf[1] = byte(0x7f & t.index)
+	buf[1] = byte(0x7f & t.Index)
 	return buf[:], nil
 }
 
@@ -50,20 +50,20 @@ func (t *ISCDigitalTransition) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 
-	t.index = uint(buf[1]) | uint(0x1f&(buf[0])<<7)
-	t.value = (buf[0]&byte(0x20) == byte(0x00))
+	t.Index = uint(buf[1]) | uint(0x1f&(buf[0])<<7)
+	t.Value = (buf[0]&byte(0x20) == byte(0x00))
 	return nil
 }
 
 func (t *ISCAnalogTransition) MarshalBinary() ([]byte, error) {
 	var buf [4]byte
-	if t.index > 1023 {
+	if t.Index > 1023 {
 		return nil, ErrIndexRange
 	}
-	buf[0] = byte(0xc0) | byte((t.value>>14)<<4) | byte(t.index>>7)
-	buf[1] = byte(0x7f & t.index)
-	buf[2] = byte(0x7f & (t.value >> 7))
-	buf[3] = byte(0x7f & t.value)
+	buf[0] = byte(0xc0) | byte((t.Value>>14)<<4) | byte(t.Index>>7)
+	buf[1] = byte(0x7f & t.Index)
+	buf[2] = byte(0x7f & (t.Value >> 7))
+	buf[3] = byte(0x7f & t.Value)
 	return buf[0:4], nil
 }
 
@@ -78,27 +78,27 @@ func (t *ISCAnalogTransition) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 
-	t.index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
-	t.value = uint16(0x30&buf[0]<<14) | uint16(buf[2]<<7) | uint16(buf[3])
+	t.Index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
+	t.Value = uint16(0x30&buf[0]<<14) | uint16(buf[2]<<7) | uint16(buf[3])
 	return nil
 }
 
 func (t *ISCSerialTransition) MarshalBinary() ([]byte, error) {
-	if t.index > 1023 {
+	if t.Index > 1023 {
 		return nil, ErrIndexRange
 	}
-	if len(t.value) > 252 {
+	if len(t.Value) > 252 {
 		return nil, ErrSerialLength
 	}
-	for j := range t.value {
-		if t.value[j] == byte(0xFF) {
+	for j := range t.Value {
+		if t.Value[j] == byte(0xFF) {
 			return nil, ErrSerialInvalidByte
 		}
 	}
-	buf := make([]byte, len(t.value)+3, len(t.value)+3)
-	buf[0] = byte(0xc8) | byte(t.index>>7)
-	buf[1] = byte(0x7f & t.index)
-	copy(buf[2:], t.value)
+	buf := make([]byte, len(t.Value)+3, len(t.Value)+3)
+	buf[0] = byte(0xc8) | byte(t.Index>>7)
+	buf[1] = byte(0x7f & t.Index)
+	copy(buf[2:], t.Value)
 	buf[len(buf)-1] = 0xff
 	return buf, nil
 }
@@ -122,9 +122,9 @@ func (t *ISCSerialTransition) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 
-	t.index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
-	t.value = make([]byte, len(buf)-3)
-	copy(t.value, buf[2:])
+	t.Index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
+	t.Value = make([]byte, len(buf)-3)
+	copy(t.Value, buf[2:])
 	return nil
 }
 
