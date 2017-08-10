@@ -7,7 +7,8 @@ var (
 	ErrIndexRange        = errors.New("Transition index exceeds encoding range")
 	ErrSerialLength      = errors.New("Serial transition length cannot exceed 252 bytes")
 	ErrSerialInvalidByte = errors.New("Serial transition cannot contain \\xFF byte")
-	ErrDecode            = errors.New("Cannot decode")
+	ErrDecodeLength      = errors.New("Cannot decode due to short buffer")
+	ErrDecodeIllegal     = errors.New("Cannot decode due to invalid bitstream")
 )
 
 type ISCDigitalTransition struct {
@@ -42,8 +43,11 @@ func (t *ISCDigitalTransition) MarshalBinary() ([]byte, error) {
 }
 
 func (t *ISCDigitalTransition) UnmarshalBinary(buf []byte) error {
+	if len(buf) < 2 {
+		return ErrDecodeLength
+	}
 	if (buf[0]&byte(0xC0) != byte(0x80)) || (buf[1]&byte(0x80) != byte(0x00)) {
-		return ErrDecode
+		return ErrDecodeIllegal
 	}
 
 	t.index = uint(buf[1]) | uint(0x1f&(buf[0])<<7)
@@ -61,6 +65,22 @@ func (t *ISCAnalogTransition) MarshalBinary() ([]byte, error) {
 	buf[2] = byte(0x7f & (t.value >> 7))
 	buf[3] = byte(0x7f & t.value)
 	return buf[0:4], nil
+}
+
+func (t *ISCAnalogTransition) UnmarshalBinary(buf []byte) error {
+	if len(buf) < 4 {
+		return ErrDecodeLength
+	}
+	if (buf[0]&byte(0xC8) != byte(0xC0)) ||
+		(buf[1]&byte(0x80) != byte(0x00)) ||
+		(buf[2]&byte(0x80) != byte(0x00)) ||
+		(buf[3]&byte(0x80) != byte(0x00)) {
+		return ErrDecodeIllegal
+	}
+
+	t.index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
+	t.value = uint16(0x30&buf[0]<<14) | uint16(buf[2]<<7) | uint16(buf[3])
+	return nil
 }
 
 func (t *ISCSerialTransition) MarshalBinary() ([]byte, error) {
