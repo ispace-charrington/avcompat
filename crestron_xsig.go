@@ -50,7 +50,7 @@ func (t *ISCDigitalTransition) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 
-	t.Index = uint(buf[1]) | uint(0x1f&(buf[0])<<7)
+	t.Index = uint(buf[1]) | uint(0x1f&buf[0])<<7
 	t.Value = (buf[0]&byte(0x20) == byte(0x00))
 	return nil
 }
@@ -78,8 +78,8 @@ func (t *ISCAnalogTransition) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 
-	t.Index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
-	t.Value = uint16(0x30&buf[0]<<14) | uint16(buf[2]<<7) | uint16(buf[3])
+	t.Index = uint(buf[1]) | uint(0x07&buf[0])<<7
+	t.Value = uint16(0x30&buf[0])<<14 | uint16(buf[2])<<7 | uint16(buf[3])
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (t *ISCSerialTransition) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 
-	t.Index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
+	t.Index = uint(buf[1]) | uint(0x07&buf[0])<<7
 	t.Value = make([]byte, len(buf)-3)
 	copy(t.Value, buf[2:])
 	return nil
