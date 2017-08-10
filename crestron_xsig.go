@@ -103,6 +103,31 @@ func (t *ISCSerialTransition) MarshalBinary() ([]byte, error) {
 	return buf, nil
 }
 
+func (t *ISCSerialTransition) UnmarshalBinary(buf []byte) error {
+	if len(buf) < 3 {
+		return ErrDecodeLength
+	}
+	if buf[len(buf)-1] != 0xff {
+		// this has three sane causes:
+		// 1: the buffer we have is incomplete, and more data will come (error = ErrDecodeLength)
+		// 2: the buffer we have contains more than one packet (error = nil)
+		// 3: the buffer contains invalid data (error = ErrDecodeIllegal)
+		//
+		// we will assume that UnmarshalBinary will always be called with a perfectly
+		// framed packet, which renders 1 & 2 impossible.
+		return ErrDecodeIllegal
+	}
+
+	if (buf[0]&byte(0xF8) != byte(0xC8)) || (buf[1]&byte(0x80) != byte(0x00)) {
+		return ErrDecodeIllegal
+	}
+
+	t.index = uint(buf[1]) | uint(0x07&(buf[0])<<7)
+	t.value = make([]byte, len(buf)-3)
+	copy(t.value, buf[2:])
+	return nil
+}
+
 func (o *ISCClearOperation) MarshalBinary() ([]byte, error) {
 	return []byte{0xFC}, nil
 }
