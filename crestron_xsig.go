@@ -107,6 +107,26 @@ func (o *ISCClearOperation) MarshalBinary() ([]byte, error) {
 	return []byte{0xFC}, nil
 }
 
+func (o *ISCClearOperation) UnmarshalBinary(buf []byte) error {
+	if len(buf) < 1 {
+		return ErrDecodeLength
+	}
+	if buf[0] != 0xFC {
+		return ErrDecodeIllegal
+	}
+	return nil
+}
+
 func (o *ISCRefreshOperation) MarshalBinary() ([]byte, error) {
 	return []byte{0xFD}, nil
+}
+
+func (o *ISCRefreshOperation) UnmarshalBinary(buf []byte) error {
+	if len(buf) < 1 {
+		return ErrDecodeLength
+	}
+	if buf[0] != 0xFD {
+		return ErrDecodeIllegal
+	}
+	return nil
 }
