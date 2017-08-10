@@ -1,6 +1,8 @@
 package avcompat
 
 import "errors"
+import "io"
+import "bufio"
 
 // ISC Errors
 var (
@@ -28,6 +30,11 @@ type ISCSerialTransition struct {
 
 type ISCClearOperation struct{}
 type ISCRefreshOperation struct{}
+
+type ISCDecoder struct {
+	r   *bufio.Reader
+	err error
+}
 
 func (t *ISCDigitalTransition) MarshalBinary() ([]byte, error) {
 	var buf [2]byte
@@ -154,4 +161,87 @@ func (o *ISCRefreshOperation) UnmarshalBinary(buf []byte) error {
 		return ErrDecodeIllegal
 	}
 	return nil
+}
+
+func NewISCDecoder(r io.Reader) *ISCDecoder {
+	return &ISCDecoder{r: bufio.NewReader(r)}
+}
+
+func (d *ISCDecoder) Decode(v interface{}) (err error) {
+	if d.r == nil {
+		return errors.New("ISCDecoder in invalid state")
+	}
+	defer func() { d.err = err }()
+
+	if d.err != nil {
+		err = d.err
+		return
+	}
+
+	p, err := d.r.Peek(1)
+	if err != nil {
+		return
+	}
+	// Clear Operation
+	if p[0] == byte(0xFC) {
+		res := ISCClearOperation{}
+		buf := make([]byte, 1)
+		_, err = io.ReadFull(d.r, buf)
+		if err != nil {
+			return
+		}
+		err = res.UnmarshalBinary(buf)
+		v = res
+		return
+	}
+	// Refresh Operation
+	if p[0] == byte(0xFD) {
+		res := ISCRefreshOperation{}
+		buf := make([]byte, 1)
+		_, err = io.ReadFull(d.r, buf)
+		if err != nil {
+			return
+		}
+		err = res.UnmarshalBinary(buf)
+		v = res
+		return
+	}
+	// Digital Transition
+	if p[0]&byte(0xC0) == byte(0x80) {
+		res := ISCDigitalTransition{}
+		buf := make([]byte, 2)
+		_, err = io.ReadFull(d.r, buf)
+		if err != nil {
+			return
+		}
+		err = res.UnmarshalBinary(buf)
+		v = res
+		return
+	}
+	// Analog Transition
+	if p[0]&byte(0xC8) == byte(0xC0) {
+		res := ISCAnalogTransition{}
+		buf := make([]byte, 4)
+		_, err = io.ReadFull(d.r, buf)
+		if err != nil {
+			return
+		}
+		err = res.UnmarshalBinary(buf)
+		v = res
+		return
+	}
+	// Serial Transition
+	if p[0]&byte(0xF8) == byte(0xC8) {
+		res := ISCSerialTransition{}
+		var buf []byte // to avoid shadowed err on next line
+		buf, err = d.r.ReadBytes(0xFF)
+		if err != nil {
+			return
+		}
+		err = res.UnmarshalBinary(buf)
+		v = res
+		return
+	}
+
+	return
 }
