@@ -167,9 +167,9 @@ func NewISCDecoder(r io.Reader) *ISCDecoder {
 	return &ISCDecoder{r: bufio.NewReader(r)}
 }
 
-func (d *ISCDecoder) Decode(v interface{}) (err error) {
+func (d *ISCDecoder) Decode() (v interface{}, err error) {
 	if d.r == nil {
-		return errors.New("ISCDecoder in invalid state")
+		return nil, errors.New("ISCDecoder in invalid state")
 	}
 	defer func() { d.err = err }()
 
