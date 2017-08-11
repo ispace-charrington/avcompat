@@ -8,7 +8,6 @@ import "bufio"
 var (
 	ErrIndexRange        = errors.New("Transition index exceeds encoding range")
 	ErrSerialLength      = errors.New("Serial transition length cannot exceed 252 bytes")
-	ErrSerialInvalidByte = errors.New("Serial transition cannot contain \\xFF byte")
 	ErrDecodeLength      = errors.New("Cannot decode due to short buffer")
 	ErrDecodeIllegal     = errors.New("Cannot decode due to invalid bitstream")
 )
@@ -97,17 +96,26 @@ func (t *ISCSerialTransition) MarshalBinary() ([]byte, error) {
 	if len(t.Value) > 252 {
 		return nil, ErrSerialLength
 	}
-	for j := range t.Value {
-		if t.Value[j] == byte(0xFF) {
-			return nil, ErrSerialInvalidByte
-		}
-	}
-	buf := make([]byte, len(t.Value)+3, len(t.Value)+3)
+	buf := make([]byte, (2*len(t.Value))+3)
 	buf[0] = byte(0xc8) | byte(t.Index>>7)
 	buf[1] = byte(0x7f & t.Index)
-	copy(buf[2:], t.Value)
-	buf[len(buf)-1] = 0xff
-	return buf, nil
+	p := 2
+	for j := range t.Value {
+		if t.Value[j] == byte(0xFE) {
+			buf[p] = 0xFE
+			buf[p+1] = 0x00
+			p += 2
+		} else if t.Value[j] == byte(0xFF) {
+			buf[p] = 0xFE
+			buf[p+1] = 0x01
+			p += 2
+		} else {
+			buf[p] = t.Value[j]
+			p++
+		}
+	}
+	buf[p] = 0xff
+	return buf[0:p+1], nil
 }
 
 func (t *ISCSerialTransition) UnmarshalBinary(buf []byte) error {
