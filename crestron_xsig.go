@@ -86,7 +86,7 @@ func (t *ISCAnalogTransition) UnmarshalBinary(buf []byte) error {
 	}
 
 	t.Index = uint(buf[1]) | uint(0x07&buf[0])<<7
-	t.Value = uint16(0x30&buf[0])<<14 | uint16(buf[2])<<7 | uint16(buf[3])
+	t.Value = uint16((0x30&buf[0])>>4)<<14 | uint16(buf[2])<<7 | uint16(buf[3])
 	return nil
 }
 
