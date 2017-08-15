@@ -6,10 +6,10 @@ import "bufio"
 
 // ISC Errors
 var (
-	ErrIndexRange        = errors.New("Transition index exceeds encoding range")
-	ErrSerialLength      = errors.New("Serial transition length cannot exceed 252 bytes")
-	ErrDecodeLength      = errors.New("Cannot decode due to short buffer")
-	ErrDecodeIllegal     = errors.New("Cannot decode due to invalid bitstream")
+	ErrIndexRange    = errors.New("Transition index exceeds encoding range")
+	ErrSerialLength  = errors.New("Serial transition length cannot exceed 252 bytes")
+	ErrDecodeLength  = errors.New("Cannot decode due to short buffer")
+	ErrDecodeIllegal = errors.New("Cannot decode due to invalid bitstream")
 )
 
 type ISCDigitalTransition struct {
@@ -115,7 +115,7 @@ func (t *ISCSerialTransition) MarshalBinary() ([]byte, error) {
 		}
 	}
 	buf[p] = 0xff
-	return buf[0:p+1], nil
+	return buf[0 : p+1], nil
 }
 
 func (t *ISCSerialTransition) UnmarshalBinary(buf []byte) error {
