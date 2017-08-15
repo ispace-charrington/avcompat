@@ -138,9 +138,38 @@ func (t *ISCSerialTransition) UnmarshalBinary(buf []byte) error {
 	}
 
 	t.Index = uint(buf[1]) | uint(0x07&buf[0])<<7
-	t.Value = make([]byte, len(buf)-3)
-	copy(t.Value, buf[2:])
-	return nil
+	// this allocation size "just works" since most serial decodes will have few or zero escapes
+	// but in the case of a pathological serial transition of all 0xFF values, the destination
+	// buffer will still have len < cap. the following appends should not need to re-allocate.
+	t.Value = make([]byte, 0, len(buf)-3)
+	for j := 2; j < len(buf); j++ {
+		switch buf[j] {
+		case (byte(0xFE)):
+			// we ignore the possibility of a read past the end of the buffer here, because
+			// earlier code guarantees that the last byte in the buffer is \xFF.
+			switch buf[j+1] {
+			case (byte(0x00)):
+				t.Value = append(t.Value, byte(0xFE))
+				j++
+			case (byte(0x01)):
+				t.Value = append(t.Value, byte(0xFF))
+				j++
+			default:
+				// invalid escape sequence
+				return ErrDecodeIllegal
+			}
+		case (byte(0xFF)):
+			if j != len(buf)-1 {
+				// we received an end-of-packet byte, but there's more bytes remaining
+				return ErrDecodeIllegal
+			}
+			return nil
+		default:
+			t.Value = append(t.Value, buf[j])
+		}
+	}
+	// this return statement shouldn't be reachable with any valid encoding
+	return ErrDecodeIllegal
 }
 
 func (o *ISCClearOperation) MarshalBinary() ([]byte, error) {
